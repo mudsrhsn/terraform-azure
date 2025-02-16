@@ -1,19 +1,13 @@
-name: Terraform
+name: Terraform Destroy
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual execution for destruction
     inputs:
       destroy:
         description: 'Set to true to destroy the infrastructure'
         required: true
         default: 'false'
-        
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
@@ -25,7 +19,7 @@ jobs:
     - name: Set up Terraform
       uses: hashicorp/setup-terraform@v3
       with:
-        terraform_version: 1.0.11
+        terraform_version: 1.10.5
 
     - name: Azure CLI Login
       uses: azure/login@v1.6.1
@@ -35,15 +29,9 @@ jobs:
     - name: Terraform Init
       run: terraform init
 
-    - name: Terraform Validate
-      run: terraform validate
-
-    - name: Terraform Plan
-      run: terraform plan
-
-    - name: Terraform Apply
-      if: github.event.inputs.destroy != 'false'
-      run: terraform apply -auto-approve
+    - name: Terraform Import Resource Group
+      if: github.event.inputs.destroy == 'true'
+      run: terraform import azurerm_resource_group.ta-rg /subscriptions/256c47d7-6c5f-4e92-b116-d234771e3690/resourceGroups/ta-resources || true
 
     - name: Terraform Destroy
       if: github.event.inputs.destroy == 'true'
