@@ -5,8 +5,11 @@ terraform {
       version = "4.18.0"
     }
   }
-  backend "local" {
-    path = "terraform.tfstate"
+  backend "azurerm" {
+    resource_group_name  = "ta-resources"
+    storage_account_name = "tastorageaccount"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
   }
 }
 
@@ -21,6 +24,23 @@ resource "azurerm_resource_group" "ta-rg" {
   tags = {
     environment = "dev"
   }
+}
+
+resource "azurerm_storage_account" "ta_storage" {
+  name                     = "tastorageaccount"
+  resource_group_name      = azurerm_resource_group.ta-rg.name
+  location                 = azurerm_resource_group.ta-rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  tags = {
+    environment = "dev"
+  }
+}
+
+resource "azurerm_storage_container" "tfstate" {
+  name                  = "tfstate"
+  storage_account_name  = azurerm_storage_account.ta_storage.name
+  container_access_type = "private"
 }
 
 resource "azurerm_virtual_network" "ta-vnet" {
