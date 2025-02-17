@@ -7,37 +7,24 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      destroy:
-        description: 'Set to true to destroy the infrastructure'
-        required: true
-        default: 'false'
-        
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
 
     - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@v2
       with:
-        terraform_version: 1.10.5
+        terraform_version: 1.0.11
 
     - name: Azure CLI Login
-      uses: azure/login@v1.6.1
+      uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Set environment variables
-      run: |
-        echo "ARM_CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientId)" >> $GITHUB_ENV
-        echo "ARM_CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientSecret)" >> $GITHUB_ENV
-        echo "ARM_SUBSCRIPTION_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .subscriptionId)" >> $GITHUB_ENV
-        echo "ARM_TENANT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .tenantId)" >> $GITHUB_ENV
 
     - name: Terraform Init
       run: terraform init
@@ -49,13 +36,5 @@ jobs:
       run: terraform plan
 
     - name: Terraform Apply
-      if: github.event.inputs.destroy != 'true'
+      if: github.ref == 'refs/heads/main'
       run: terraform apply -auto-approve
-
-    - name: Terraform Import Resource Group
-      if: github.event.inputs.destroy == 'true'
-      run: terraform import azurerm_resource_group.ta-rg /subscriptions/256c47d7-6c5f-4e92-b116-d234771e3690/resourceGroups/ta-resources || true
-
-    - name: Terraform Destroy
-      if: github.event.inputs.destroy == 'true'
-      run: terraform destroy -auto-approve
